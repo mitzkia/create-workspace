@@ -1,0 +1,12 @@
+base_dir: /home/myuser/mydir/
+
+first-level-dir1/second-level-dir1/:
+
+first-level-dir2/second-level-dir2/test-file.txt:
+  content: "example content line 1\n\
+example content line 2\n\
+"
+
+first-level-dir3/changeme/test-file.txt:
+  content: "changeme\n\
+"
