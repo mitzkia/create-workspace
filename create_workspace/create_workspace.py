@@ -1,6 +1,5 @@
 import argparse
 import logging
-import sys
 from pathlib import Path
 
 import yaml
@@ -9,65 +8,60 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("create_workspace")
 
 
-def has_content_but_no_file_extension(base_dir, key, value):
-    return value and value["content"] and not Path(base_dir, key).suffix
+def replace_changeme_if_needed(pattern, replace_string):
+    if replace_string:
+        if pattern and pattern:
+            # We have a file content
+            return pattern.replace("changeme", replace_string)
+        # We have a path
+        return pattern.replace("changeme", replace_string)
+    # There is no replace string defined
+    return pattern
 
 
-def replace_changeme_if_needed(content, new_string):
-    if new_string:
-        return content.replace("changeme", new_string)
-    return content
+def create_parent_dirs(base_dir, defined_path, content):
+    if content is not None:
+        # File is specified
+        Path(base_dir, defined_path).parent.mkdir(parents=True, exist_ok=True)
+        logger.info("Directory '%s' has been (re-)created", Path(base_dir, defined_path).parent)
+    elif not content:
+        # Dir is specified
+        Path(base_dir, defined_path).mkdir(parents=True, exist_ok=True)
+        logger.info("Directory '%s' has been (re-)created", Path(base_dir, defined_path))
 
 
-def create_parent_dirs_if_needed(base_dir, sub_path, content):
-    if Path(base_dir, sub_path).suffix or content is not None:
-        Path(base_dir, sub_path).parent.mkdir(parents=True, exist_ok=True)
-        logger.info("Directory '%s' has been created", Path(base_dir, sub_path).parent)
-    else:
-        Path(base_dir, sub_path).mkdir(parents=True, exist_ok=True)
-        logger.info("Directory '%s' has been created", Path(base_dir, sub_path))
-
-
-def create_file_content(base_dir, sub_path, content):
-    if Path(base_dir, sub_path).suffix or content is not None:
-        with open(Path(base_dir, sub_path), "w") as file_object:
+def create_file_content(base_dir, defined_path, content):
+    if content is not None:
+        # File is specified
+        with open(Path(base_dir, defined_path), "w") as file_object:
             file_object.write(content)
-            logger.info("File '%s' has been created with content", Path(base_dir, sub_path))
+            logger.info("File '%s' has been created with content", Path(base_dir, defined_path))
 
 
-def create_workspace(input_file, replace_string=None):
+def create_workspace(base_dir, input_file, replace_string=None):
     with open(input_file, "r") as file_object:
         yaml_content_as_dict = yaml.safe_load(file_object)
 
-    if "base_dir" not in yaml_content_as_dict.keys():
-        logger.error("Definition of 'base_dir' must be exist in input file: %s", input_file)
-        sys.exit()
+    for defined_path, file_content in yaml_content_as_dict.items():
 
-    for key, value in yaml_content_as_dict.items():
+        defined_path = replace_changeme_if_needed(defined_path, replace_string)
+        file_content = replace_changeme_if_needed(file_content, replace_string)
 
-        if key == "base_dir":
-            base_dir = value
-            continue
-
-        key = replace_changeme_if_needed(key, replace_string)
-        if value and value["content"]:
-            value["content"] = replace_changeme_if_needed(value["content"], replace_string)
-
-        create_parent_dirs_if_needed(base_dir, key, value["content"])
-
-        if value:
-            create_file_content(base_dir, key, value["content"])
+        create_parent_dirs(base_dir, defined_path, file_content)
+        create_file_content(base_dir, defined_path, file_content)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Tool which can create dirs and files from yaml")
-    parser.add_argument("--input", help="YAML formatted input file")
-    parser.add_argument("--replace", help="The new string when replacing")
+    parser.add_argument("--base-dir", required=True, help="The base path for created workspace")
+    parser.add_argument("--input", required=True, help="YAML formatted input file")
+    parser.add_argument("--replace-string", help="The new string when replacing")
     args = parser.parse_args()
 
+    base_dir = args.base_dir
     input_file = args.input
-    replace_string = args.replace
-    create_workspace(input_file=input_file, replace_string=replace_string)
+    replace_string = args.replace_string
+    create_workspace(base_dir=base_dir, input_file=input_file, replace_string=replace_string)
 
 
 if __name__ == "__main__":
