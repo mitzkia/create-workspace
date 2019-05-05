@@ -19,8 +19,8 @@ def replace_changeme_if_needed(content, new_string):
     return content
 
 
-def create_parent_dirs_if_needed(base_dir, sub_path):
-    if Path(base_dir, sub_path).suffix:
+def create_parent_dirs_if_needed(base_dir, sub_path, content):
+    if Path(base_dir, sub_path).suffix or content is not None:
         Path(base_dir, sub_path).parent.mkdir(parents=True, exist_ok=True)
         logger.info("Directory '%s' has been created", Path(base_dir, sub_path).parent)
     else:
@@ -29,7 +29,7 @@ def create_parent_dirs_if_needed(base_dir, sub_path):
 
 
 def create_file_content(base_dir, sub_path, content):
-    if Path(base_dir, sub_path).suffix:
+    if Path(base_dir, sub_path).suffix or content is not None:
         with open(Path(base_dir, sub_path), "w") as file_object:
             file_object.write(content)
             logger.info("File '%s' has been created with content", Path(base_dir, sub_path))
@@ -49,16 +49,11 @@ def create_workspace(input_file, replace_string=None):
             base_dir = value
             continue
 
-        if has_content_but_no_file_extension(base_dir, key, value):
-            logger.warning("Can not create file without specified file extension")
-            logger.warning("Please specify file extension to: %s", key)
-            continue
-
         key = replace_changeme_if_needed(key, replace_string)
         if value and value["content"]:
             value["content"] = replace_changeme_if_needed(value["content"], replace_string)
 
-        create_parent_dirs_if_needed(base_dir, key)
+        create_parent_dirs_if_needed(base_dir, key, value["content"])
 
         if value:
             create_file_content(base_dir, key, value["content"])
